@@ -13,7 +13,7 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 db = ElementalDB("database")
-pwd_context = CryptContext(schemas=["argon2"], deprecated="auto")
+pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 class Token(BaseModel):
@@ -22,6 +22,7 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     username: Optional[str] = None
+    role: str = ""
 
 class User(BaseModel):
     
@@ -30,11 +31,14 @@ class User(BaseModel):
     password: str
     role: str
 
-    def __init__(self, _id: int, _username: str, _password: str, _role: str):
-        self.id = _id
-        self.username = _username
-        self.password = _password
-        self.role = _role
+def UserResponse(username: str, password: str, role:str = "", id: int = None):
+    user = User()
+    user.username = username
+    user.password = password
+    user.role = role
+    user.id = id
+
+    return user
 
 class UserInDB(User):
     hashed_password: str
@@ -53,12 +57,12 @@ async def get_user(username: str) -> Optional[UserInDB]:
             user_data = users[0]
             return UserInDB(**user_data)
     except:
-        return None
+        pass
     return None
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     to_encode = data.copy()
-    expire = datetime.utcnow() + (expires_delta if expires_delta else timedelta(minutes=15))
+    expire = datetime.now() + (expires_delta if expires_delta else timedelta(minutes=15))
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
@@ -84,9 +88,10 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
+        role: str = payload.get("role")
         if username is None:
             raise credentials_exception
-        token_data = TokenData(username=username)
+        token_data = TokenData(username=username,role=role)
     except JWTError:
         raise credentials_exception
     user = await get_user(username=token_data.username)

@@ -1,7 +1,6 @@
 import requests
 from typing import Any, List, Dict
 import time
-from auth import User
 
 class ElementalDBClient:
     """
@@ -15,7 +14,7 @@ class ElementalDBClient:
         timeout (int): The default timeout for HTTP requests.
     """
 
-    def __init__(self, base_url: str, timeout: int = 5) -> None:
+    def __init__(self, base_url: str, timeout: int = 5, auth_enable: bool = True) -> None:
         """
         Initializes the ElementalDBClient with the specified base URL.
 
@@ -25,6 +24,8 @@ class ElementalDBClient:
         """
         self.base_url = base_url
         self.timeout = timeout
+        self.auth_enabled = auth_enable
+        self.access_token = None
 
     def add_item(self, table_name: str, columns: List[str], values: List[Any]) -> Dict:
         """
@@ -42,7 +43,8 @@ class ElementalDBClient:
             response = requests.post(f"{self.base_url}/add", json={
                 "table_name": table_name,
                 "columns": columns,
-                "values": values  # Ensure values is a list, not a dictionary
+                "values": values,  # Ensure values is a list, not a dictionary
+                "token": self.access_token
             }, timeout=self.timeout)
             response.raise_for_status()
             return response.json()
@@ -62,7 +64,7 @@ class ElementalDBClient:
             Dict: The response from the server containing a list of items in the table.
         """
         try:
-            response = requests.get(f"{self.base_url}/get/{table_name}", timeout=self.timeout)
+            response = requests.get(f"{self.base_url}/get/{table_name}", params=self.access_token, timeout=self.timeout)
             response.raise_for_status()
             return response.json()
         except requests.exceptions.Timeout:
@@ -82,7 +84,7 @@ class ElementalDBClient:
             Dict: The response from the server confirming the deletion.
         """
         try:
-            response = requests.delete(f"{self.base_url}/delete/{table_name}/{id}", timeout=self.timeout)
+            response = requests.delete(f"{self.base_url}/delete/{table_name}/{id}",params=self.access_token, timeout=self.timeout)
             response.raise_for_status()
             return response.json()
         except requests.exceptions.Timeout:
@@ -93,13 +95,40 @@ class ElementalDBClient:
     def signup(self, username: str, password: str, role: str):
         """ Requests to make a new user by the given arguments """
 
+        if not self.auth_enabled:
+            return
+
         try:
-            response = requests.post(f"{self.base_url}/signup", json={
-                #"requesterUser": self.currentUser,
-                #"newUser": User()
+            response = requests.post(f"{self.base_url}/signup/", json={
+                "username": username,
+                "password": password,
+                "role": role
             })
-        except:
-            pass
+            if response:
+                return response.json()
+            else:
+                raise requests.exceptions.HTTPError("The signup request had no response")
+        except requests.exceptions.HTTPError as e:
+            return {"error": str(e)}
+    
+    def login(self, username: str, password: str):
+        """ Login in an existant account """
+
+        if not self.auth_enabled:
+            return
+
+        try:
+            response = requests.post(f"{self.base_url}/login", json={
+                "username": username,
+                "password": password
+            })
+            if response:
+                self.access_token = response.json().get("access_token")
+                return response.json()
+            else:
+                raise requests.exceptions.HTTPError("Login request had no response")
+        except requests.exceptions.HTTPError as e:
+            return {"error": str(e)}
 
     def update_item(self, table_name: str, row_id: int, updates: Dict[str, Any]) -> Dict:
         """
@@ -117,7 +146,8 @@ class ElementalDBClient:
             response = requests.put(f"{self.base_url}/update", json={
                 "table_name": table_name,
                 "row_id": row_id,
-                "updates": updates  # Ensure updates is a dictionary with column-value pairs
+                "updates": updates,  # Ensure updates is a dictionary with column-value pairs
+                "token": self.access_token
             }, timeout=self.timeout)
             response.raise_for_status()
             return response.json()
@@ -132,14 +162,20 @@ if __name__ == "__main__":
     Measures the time taken for each operation and prints the results for verification.
     """
     start = time.time()
-    client = ElementalDBClient("http://127.0.0.1:8000")
+    client = ElementalDBClient("http://127.0.0.1:8000",auth_enable=True)
 
     table_name = "users"
     columns = ["id", "name", "email"]
     values = [1, "John Doe", "john@example.com"]
 
+    # Make an user account
+    print("Creating user account...")
+    signup_response = client.signup("MikesMorales","my_password","awrd")
+    client.login("MikesMorales","my_password")
+    print("Signup response:",signup_response)
+
     # Add item to the table
-    print("Adding item to the table...")
+    print("\nAdding item to the table...")
     add_response = client.add_item(table_name, columns, values)
     print("Add Response:", add_response)
 
