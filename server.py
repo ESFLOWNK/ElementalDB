@@ -37,7 +37,7 @@ def matchRole(searchedRole: str,token: TokenData):
     if not auth_enabled:
         return
 
-    if token == None or token.role:
+    if token == None or not token.role:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND)
     if not searchedRole in token.role:
         raise HTTPException(status_code=HTTPStatus.UNAUTHORIZED)
