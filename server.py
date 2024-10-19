@@ -11,7 +11,6 @@ from auth import (
     Token,
     TokenData,
     User,
-    UserResponse,
     get_current_user
 )
 from datetime import timedelta
@@ -42,7 +41,7 @@ def matchRole(searchedRole: str,token: TokenData):
     if not searchedRole in token.role:
         raise HTTPException(status_code=HTTPStatus.UNAUTHORIZED)
 
-@app.post("/signup")
+@app.post("/signup/")
 async def signup(newUser: User):
     """
     Create a new user account.
@@ -163,10 +162,10 @@ async def get_items(table_name: str, token: TokenData = Depends(get_current_user
     try:
         items = await db.get(table_name)
         if not items:
-            raise HTTPException(status_code=404, detail="Table not found or is empty")
+            raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Table not found or is empty")
         return items
     except Exception as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=str(e))
 
 @app.delete("/delete/{table_name}/{id}")
 async def delete_item(table_name: str, id: int, token: TokenData = Depends(get_current_user), auth_enabled: bool = auth_enabled):
@@ -190,7 +189,7 @@ async def delete_item(table_name: str, id: int, token: TokenData = Depends(get_c
         await db.delete(table_name, id)
         return {"message": "Item deleted successfully"}
     except Exception as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=str(e))
 
 @app.put("/update")
 async def update_item(table_name: str, row_id: int, updates: Dict[str, str], token: TokenData = Depends(get_current_user), auth_enabled: bool = auth_enabled):
@@ -215,7 +214,7 @@ async def update_item(table_name: str, row_id: int, updates: Dict[str, str], tok
         await db.update(table_name, row_id, updates)
         return {"message": "Item updated successfully"}
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=str(e))
 
 if __name__ == "__main__":
     if len(argv) < 2:

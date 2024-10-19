@@ -3,10 +3,11 @@ import orjson
 import random
 import string
 import cachetools
+import secrets
 
 class ElementalDB:
     def __init__(self, db_dir="db", map_file="map.map"):
-        self.db_dir = db_dir
+        self.db_dir = db_dir 
         self.map_file = map_file
         self.shards = {}
         self.BTREE_DEGREE = 2
@@ -60,7 +61,7 @@ class ElementalDB:
             record = {col[0]: data[i] for i, col in enumerate(schema)}
 
         if 'id' not in record:
-            record['id'] = random.randint(1, 1000000)
+            record['id'] = secrets.randbelow(1000000)
 
         self.cache[f"{table_name}_{record['id']}"] = record
 

@@ -93,16 +93,27 @@ class ElementalDBClient:
             return {"error": str(e)}
         
     def signup(self, username: str, password: str, role: str):
-        """ Requests to make a new user by the given arguments """
+        """ 
+        Requests to make a new user by the given arguments
+
+        Args:
+            username (str): The username.
+            password (str): The user's password
+            role (str): The user permisses
+
+        Returns:
+            JSON / dict: The response of the API
+        """
 
         if not self.auth_enabled:
             return
 
         try:
-            response = requests.post(f"{self.base_url}/signup/", json={
+            response = requests.post(f"{self.base_url}/signup/", data={
                 "username": username,
                 "password": password,
-                "role": role
+                "role": role,
+                "id": None
             })
             if response:
                 return response.json()
@@ -112,7 +123,16 @@ class ElementalDBClient:
             return {"error": str(e)}
     
     def login(self, username: str, password: str):
-        """ Login in an existant account """
+        """ 
+        Login in an existant account
+
+        Args:
+            username (str): The username.
+            password (str): The user's access password
+
+        Returns:
+            JSON / dict: The response of the API
+        """
 
         if not self.auth_enabled:
             return
@@ -120,10 +140,11 @@ class ElementalDBClient:
         try:
             response = requests.post(f"{self.base_url}/login", json={
                 "username": username,
-                "password": password
+                "password": password,
+                "auth_enabled": True
             })
             if response:
-                self.access_token = response.json().get("access_token")
+                # self.access_token = response.json().get("access_token")
                 return response.json()
             else:
                 raise requests.exceptions.HTTPError("Login request had no response")
@@ -171,8 +192,11 @@ if __name__ == "__main__":
     # Make an user account
     print("Creating user account...")
     signup_response = client.signup("MikesMorales","my_password","awrd")
-    client.login("MikesMorales","my_password")
     print("Signup response:",signup_response)
+
+    print("\nLogin...")
+    login_response = client.login("MikesMorales","my_password")
+    print("Login response: ", login_response)
 
     # Add item to the table
     print("\nAdding item to the table...")

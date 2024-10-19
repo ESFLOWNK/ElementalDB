@@ -1,4 +1,5 @@
 import re
+import ast
 import asyncio
 import argparse  # For command-line argument parsing
 from ElementalDB import ElementalDB
@@ -40,14 +41,14 @@ class EDLangCompiler:
 
     async def handle_add(self, match, add_pattern):
         table_name = match.group(1)
-        values = eval(match.group(2))
+        values = ast.literal_eval(match.group(2))
         await self.db.add(table_name, values)
         print(f"Record {values} added to table '{table_name}'")
 
     async def handle_update(self, match, update_pattern):
         table_name = match.group(1)
-        old_values = eval(match.group(2))
-        new_values = eval(match.group(3))
+        old_values = ast.literal_eval(match.group(2))
+        new_values = ast.literal_eval(match.group(3))
         record = await self.db.get(table_name, 'id', old_values[0])  # Assume 'id' is the first element
         if record:
             await self.db.update(table_name, record['id'], dict(zip(record.keys(), new_values)))
@@ -57,12 +58,12 @@ class EDLangCompiler:
 
     async def handle_delete(self, match, delete_pattern):
         table_name = match.group(1)
-        values = eval(match.group(2))
+        values = ast.literal_eval(match.group(2))
         await self.db.delete(table_name, values)
 
     async def handle_select(self, match, select_pattern):
         table_name = match.group(1)
-        values = eval(match.group(2))
+        values = ast.literal_eval(match.group(2))
         record = await self.db.get(table_name, 'id', values[0])  # Assuming the first value is 'id'
         if record:
             print(f"Record found: {record}")
